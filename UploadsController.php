@@ -47,26 +47,32 @@ class UploadsController extends Controller
          * Now we're ready to analyze the image using the SightEngine AI Engine
          * Intialize the sightEngine. Use the API information saved in your .env file
          */
-        
+
         $SightEngine = new SightengineClient(env('SIGHTENGINEUSER'), env('SIGHTENGINEKEY'));
 
         //analyze the locally stored image for nudity
-        $nudityCheck = $SightEngine->check(['nudity'])->set_file($localFilePath);
+        $imageCheck = $SightEngine->check(['nudity'])->set_file($localFilePath);
 
         /**
          * determine an acceptability threshold.
          *For our example, we will reject any image with a score greater than 0.60
          */
-        if ($nudityCheck->nudity->raw > 0.60) {
-            // remove from our server if successful upload
+
+        $rawNudityProbability = $imageCheck->nudity->raw;
+        $acceptableThreshhold  = 0.60;
+
+        if ($rawNudityProbability > $acceptableThreshhold) {
+            // remove from our storage destination if we don't want to keep it.
             unlink($localFilePath);
 
+            //take action on the user. Send a warning message, log a report, investigate, ban them, notify the admin, etc
+            //send a response back to the user
             return response()->json([
                 'success' => true,
                 'message' => 'Problem with the image upload!',
             ]);
         }
-        //end check nudity
+        //end nudity check
 
         // s3 path to where the upload will go based on env url
         $destinationPath = env('S3_UPLOADS_DIR') . 'avatars/' . $filename;
